@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cylo Base Calculator</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-2: #1f2330;
+    --text: #e7ecf3;
+    --muted: #8b94a7;
+    --accent: #5cc8ff;
+    --accent-2: #7af0c2;
+    --warn: #ffb454;
+    --bad: #ff6b6b;
+    --good: #7af0c2;
+    --border: #2a2f3d;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 24px 18px 48px; }
+  header h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: 0.2px; }
+  header p { margin: 0 0 20px; color: var(--muted); font-size: 13px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .card h2 { font-size: 14px; margin: 0 0 12px; color: var(--muted); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.8px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .row { margin-bottom: 12px; }
+  .input, select {
+    width: 100%; background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px;
+    font-size: 14px; outline: none;
+  }
+  .input:focus, select:focus { border-color: var(--accent); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .slider-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .pill { background: var(--panel-2); padding: 4px 8px; border-radius: 999px;
+    font-size: 12px; color: var(--muted); border: 1px solid var(--border); }
+  .results { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+  .stat .k { font-size: 12px; color: var(--muted); }
+  .stat .v { font-size: 20px; font-weight: 600; margin-top: 2px; }
+  .stat .u { font-size: 12px; color: var(--muted); margin-left: 4px; }
+  .verdict { padding: 10px 12px; border-radius: 10px; font-size: 13px; margin-top: 8px;
+    border: 1px solid var(--border); }
+  .verdict.good { color: var(--good); border-color: rgba(122,240,194,0.35); background: rgba(122,240,194,0.06); }
+  .verdict.warn { color: var(--warn); border-color: rgba(255,180,84,0.35); background: rgba(255,180,84,0.06); }
+  .verdict.bad  { color: var(--bad);  border-color: rgba(255,107,107,0.35); background: rgba(255,107,107,0.06); }
+  .vis { display: flex; align-items: center; justify-content: center; padding: 8px; }
+  svg { width: 100%; height: auto; max-height: 320px; }
+  .meter { height: 8px; background: var(--panel-2); border-radius: 999px; overflow: hidden;
+    border: 1px solid var(--border); margin-top: 6px; }
+  .meter > span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+  .small { font-size: 12px; color: var(--muted); }
+  details { margin-top: 10px; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+  footer { margin-top: 22px; color: var(--muted); font-size: 12px; text-align: center; }
+  .balance-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Cylo Base Calculator</h1>
+    <p>Sizes a cylindrical base that balances <strong>tipping-safety</strong> against <strong>material weight</strong>.</p>
+  </header>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Load &amp; Conditions</h2>
+
+      <div class="row">
+        <label>Object (load) mass</label>
+        <div class="slider-row">
+          <input type="range" id="loadMass" min="1" max="2000" step="1" value="80" />
+          <span class="pill"><span id="loadMassV">80</span> kg</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Center-of-mass height above base</label>
+        <div class="slider-row">
+          <input type="range" id="comH" min="0.05" max="3" step="0.01" value="1.2" />
+          <span class="pill"><span id="comHV">1.20</span> m</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Expected lateral force (wind / push / seismic equivalent)</label>
+        <div class="slider-row">
+          <input type="range" id="lateral" min="0" max="2000" step="5" value="120" />
+          <span class="pill"><span id="lateralV">120</span> N</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Required safety factor against tipping</label>
+        <div class="slider-row">
+          <input type="range" id="sf" min="1.1" max="4" step="0.05" value="2" />
+          <span class="pill">×<span id="sfV">2.00</span></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Base Material &amp; Constraints</h2>
+
+      <div class="row two">
+        <div>
+          <label>Material</label>
+          <select id="material">
+            <option value="2400">Concrete (2400 kg/m³)</option>
+            <option value="7850" selected>Steel (7850 kg/m³)</option>
+            <option value="2700">Aluminum (2700 kg/m³)</option>
+            <option value="700">Wood — oak (700 kg/m³)</option>
+            <option value="1200">HDPE plastic (1200 kg/m³)</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </div>
+        <div>
+          <label>Density (kg/m³)</label>
+          <input type="number" class="input" id="density" value="7850" min="100" />
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Minimum base thickness</label>
+        <div class="slider-row">
+          <input type="range" id="thick" min="0.005" max="0.2" step="0.005" value="0.03" />
+          <span class="pill"><span id="thickV">30</span> mm</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Maximum allowable base radius</label>
+        <div class="slider-row">
+          <input type="range" id="rmax" min="0.05" max="2" step="0.01" value="0.8" />
+          <span class="pill"><span id="rmaxV">0.80</span> m</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <label class="balance-label"><span>Lighter base</span><span>Safer base</span></label>
+        <input type="range" id="balance" min="0" max="1" step="0.01" value="0.5" />
+        <div class="small">Balance: <span id="balanceV">50%</span> safety bias</div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:16px;">
+    <h2>Recommended Base</h2>
+    <div class="grid">
+      <div>
+        <div class="results">
+          <div class="stat"><div class="k">Radius</div><div class="v"><span id="rOut">—</span><span class="u">m</span></div></div>
+          <div class="stat"><div class="k">Diameter</div><div class="v"><span id="dOut">—</span><span class="u">m</span></div></div>
+          <div class="stat"><div class="k">Thickness</div><div class="v"><span id="tOut">—</span><span class="u">mm</span></div></div>
+          <div class="stat"><div class="k">Base mass</div><div class="v"><span id="mOut">—</span><span class="u">kg</span></div></div>
+          <div class="stat"><div class="k">Achieved SF</div><div class="v"><span id="sfOut">—</span><span class="u">×</span></div></div>
+          <div class="stat"><div class="k">Tip-over angle</div><div class="v"><span id="aOut">—</span><span class="u">°</span></div></div>
+        </div>
+        <div id="verdict" class="verdict">—</div>
+        <div class="small" style="margin-top:10px;">Stability score</div>
+        <div class="meter"><span id="meter" style="width:0%"></span></div>
+
+        <details>
+          <summary>How it works</summary>
+          <p class="small" style="margin-top:8px;">
+            The base must resist tipping when the lateral force <em>F</em> acts at the load's CoM height <em>h</em>.
+            The righting moment is <em>(m<sub>load</sub> + m<sub>base</sub>) · g · R</em>; tipping moment is <em>F · h</em>.
+            We solve for the smallest radius that achieves your safety factor, then nudge it
+            larger or thicker based on the balance slider. Mass = π R² t ρ.
+          </p>
+        </details>
+      </div>
+      <div class="vis">
+        <svg viewBox="0 0 320 320" id="viz" aria-label="Base visualization">
+          <defs>
+            <linearGradient id="gBase" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stop-color="#3a4258"/>
+              <stop offset="1" stop-color="#1c2030"/>
+            </linearGradient>
+            <linearGradient id="gLoad" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stop-color="#5cc8ff"/>
+              <stop offset="1" stop-color="#2a8ec0"/>
+            </linearGradient>
+          </defs>
+          <line x1="20" y1="280" x2="300" y2="280" stroke="#2a2f3d" stroke-width="2"/>
+          <ellipse id="baseBottom" cx="160" cy="280" rx="100" ry="14" fill="#10131a" stroke="#2a2f3d"/>
+          <rect    id="baseSide"   x="60"  y="250" width="200" height="30" fill="url(#gBase)" stroke="#2a2f3d"/>
+          <ellipse id="baseTop"    cx="160" cy="250" rx="100" ry="14" fill="#2a3145" stroke="#2a2f3d"/>
+          <rect    id="loadSide"   x="140" y="100" width="40"  height="150" fill="url(#gLoad)" opacity="0.9"/>
+          <ellipse id="loadTop"    cx="160" cy="100" rx="20" ry="6" fill="#7adcff"/>
+          <circle  id="comDot"     cx="160" cy="170" r="5" fill="#ffb454" stroke="#0f1115" stroke-width="2"/>
+          <text x="160" y="306" text-anchor="middle" fill="#8b94a7" font-size="11" id="vizLabel">—</text>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Estimates only — not a substitute for engineering review. Assumes rigid base on level ground, friction sufficient to prevent sliding.
+  </footer>
+</div>
+
+<script>
+const g = 9.81;
+
+const els = {
+  loadMass: document.getElementById('loadMass'),
+  comH: document.getElementById('comH'),
+  lateral: document.getElementById('lateral'),
+  sf: document.getElementById('sf'),
+  material: document.getElementById('material'),
+  density: document.getElementById('density'),
+  thick: document.getElementById('thick'),
+  rmax: document.getElementById('rmax'),
+  balance: document.getElementById('balance'),
+};
+
+const out = {
+  loadMassV: document.getElementById('loadMassV'),
+  comHV: document.getElementById('comHV'),
+  lateralV: document.getElementById('lateralV'),
+  sfV: document.getElementById('sfV'),
+  thickV: document.getElementById('thickV'),
+  rmaxV: document.getElementById('rmaxV'),
+  balanceV: document.getElementById('balanceV'),
+  rOut: document.getElementById('rOut'),
+  dOut: document.getElementById('dOut'),
+  tOut: document.getElementById('tOut'),
+  mOut: document.getElementById('mOut'),
+  sfOut: document.getElementById('sfOut'),
+  aOut: document.getElementById('aOut'),
+  verdict: document.getElementById('verdict'),
+  meter: document.getElementById('meter'),
+};
+
+els.material.addEventListener('change', () => {
+  if (els.material.value !== 'custom') els.density.value = els.material.value;
+  recompute();
+});
+
+function safetyFactor(R, t, m_load, h, F, rho) {
+  const m_base = Math.PI * R * R * t * rho;
+  const m_total = m_load + m_base;
+  const righting = m_total * g * R;
+  const tipping = F * h;
+  if (tipping <= 0) return Infinity;
+  return righting / tipping;
+}
+
+function solve() {
+  const m_load = +els.loadMass.value;
+  const h      = +els.comH.value;
+  const F      = +els.lateral.value;
+  const sfReq  = +els.sf.value;
+  const rho    = Math.max(50, +els.density.value || 0);
+  const tMin   = +els.thick.value;
+  const Rmax   = +els.rmax.value;
+  const bias   = +els.balance.value; // 0 light .. 1 safe
+
+  // Find smallest R with thickness tMin meeting sfReq
+  let lo = 0.01, hi = Rmax, found = null;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    const sf = safetyFactor(mid, tMin, m_load, h, F, rho);
+    if (sf >= sfReq) { found = mid; hi = mid; } else { lo = mid; }
+  }
+
+  let R, t = tMin, feasible = true;
+  if (found === null) {
+    // Even at Rmax with tMin we can't hit the required SF; thicken to add mass.
+    R = Rmax;
+    // Solve thickness needed: (m_load + π R² t ρ) g R >= sfReq F h
+    const need = sfReq * F * h / g / R - m_load;
+    if (need <= 0) { t = tMin; }
+    else {
+      const tNeed = need / (Math.PI * R * R * rho);
+      t = Math.max(tMin, tNeed);
+    }
+    if (safetyFactor(R, t, m_load, h, F, rho) < sfReq) feasible = false;
+  } else {
+    // Apply balance bias: blend from minimum-radius solution toward Rmax.
+    R = found + (Rmax - found) * bias;
+    // Slight thickness increase if user is heavily safety-biased.
+    if (bias > 0.66) t = tMin * (1 + (bias - 0.66) * 1.5);
+  }
+
+  const sf = safetyFactor(R, t, m_load, h, F, rho);
+  const m_base = Math.PI * R * R * t * rho;
+  const tipAngle = Math.atan(R / h) * 180 / Math.PI;
+
+  return { R, t, m_base, sf, tipAngle, feasible, sfReq, m_load, h };
+}
+
+function fmt(n, d=2) {
+  if (!isFinite(n)) return '∞';
+  return Number(n).toFixed(d);
+}
+
+function updateViz(R, t, h) {
+  const cx = 160, ground = 280;
+  // Scale: pick scale so that max(R, h) fits the box (~120px usable height for load, base width ~250px max)
+  const maxDim = Math.max(R * 2, h + t);
+  const px = Math.min(250 / (R * 2 || 0.001), 220 / (maxDim || 0.001));
+  const baseW = R * 2 * px;
+  const baseH = Math.max(8, t * px);
+  const loadH = h * px;
+  const loadW = Math.min(baseW * 0.4, 80);
+
+  const baseLeft = cx - baseW / 2;
+  const baseTopY = ground - baseH;
+
+  document.getElementById('baseSide').setAttribute('x', baseLeft);
+  document.getElementById('baseSide').setAttribute('y', baseTopY);
+  document.getElementById('baseSide').setAttribute('width', baseW);
+  document.getElementById('baseSide').setAttribute('height', baseH);
+  document.getElementById('baseBottom').setAttribute('cx', cx);
+  document.getElementById('baseBottom').setAttribute('cy', ground);
+  document.getElementById('baseBottom').setAttribute('rx', baseW/2);
+  document.getElementById('baseBottom').setAttribute('ry', Math.max(4, baseH*0.45));
+  document.getElementById('baseTop').setAttribute('cx', cx);
+  document.getElementById('baseTop').setAttribute('cy', baseTopY);
+  document.getElementById('baseTop').setAttribute('rx', baseW/2);
+  document.getElementById('baseTop').setAttribute('ry', Math.max(4, baseH*0.45));
+
+  const loadTopY = Math.max(20, baseTopY - loadH);
+  document.getElementById('loadSide').setAttribute('x', cx - loadW/2);
+  document.getElementById('loadSide').setAttribute('y', loadTopY);
+  document.getElementById('loadSide').setAttribute('width', loadW);
+  document.getElementById('loadSide').setAttribute('height', baseTopY - loadTopY);
+  document.getElementById('loadTop').setAttribute('cx', cx);
+  document.getElementById('loadTop').setAttribute('cy', loadTopY);
+  document.getElementById('loadTop').setAttribute('rx', loadW/2);
+
+  document.getElementById('comDot').setAttribute('cx', cx);
+  document.getElementById('comDot').setAttribute('cy', baseTopY - loadH/2);
+
+  document.getElementById('vizLabel').textContent =
+    `Ø ${fmt(R*2)} m × ${fmt(t*1000,0)} mm thick`;
+}
+
+function recompute() {
+  out.loadMassV.textContent = els.loadMass.value;
+  out.comHV.textContent     = (+els.comH.value).toFixed(2);
+  out.lateralV.textContent  = els.lateral.value;
+  out.sfV.textContent       = (+els.sf.value).toFixed(2);
+  out.thickV.textContent    = Math.round(+els.thick.value * 1000);
+  out.rmaxV.textContent     = (+els.rmax.value).toFixed(2);
+  out.balanceV.textContent  = Math.round(+els.balance.value * 100) + '%';
+
+  const r = solve();
+  out.rOut.textContent = fmt(r.R, 3);
+  out.dOut.textContent = fmt(r.R * 2, 3);
+  out.tOut.textContent = fmt(r.t * 1000, 0);
+  out.mOut.textContent = fmt(r.m_base, 2);
+  out.sfOut.textContent = fmt(r.sf, 2);
+  out.aOut.textContent = fmt(r.tipAngle, 1);
+
+  const v = out.verdict;
+  v.classList.remove('good','warn','bad');
+  if (!r.feasible) {
+    v.classList.add('bad');
+    v.textContent = `Cannot reach SF ${r.sfReq.toFixed(2)} within max radius ${(+els.rmax.value).toFixed(2)} m. Increase the radius cap, lower the load CoM, or reduce expected lateral force.`;
+  } else if (r.sf >= r.sfReq * 1.25) {
+    v.classList.add('good');
+    v.textContent = `Comfortable margin: achieves SF ${r.sf.toFixed(2)} (target ${r.sfReq.toFixed(2)}). Tips at ~${r.tipAngle.toFixed(1)}° from vertical.`;
+  } else {
+    v.classList.add('warn');
+    v.textContent = `Meets target SF ${r.sfReq.toFixed(2)} (achieved ${r.sf.toFixed(2)}). Add radius or thickness for more headroom.`;
+  }
+
+  const score = Math.max(0, Math.min(1, (r.sf - 1) / 3));
+  out.meter.style.width = (score * 100).toFixed(0) + '%';
+
+  updateViz(r.R, r.t, r.h);
+}
+
+['input','change'].forEach(ev => {
+  Object.values(els).forEach(el => el.addEventListener(ev, recompute));
+});
+recompute();
+</script>
+</body>
+</html>
